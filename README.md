@@ -1,9 +1,4 @@
-# Microprocessor
-For the 2024-1 Microprocessor class
-
-@김동현 @오준영 @한호범
-
-Our team seperate the code 3 parts.
-1. Timer/Counter
-2. Interrupt
-3. Motor Control
+This branch is part of Timer/Counter code for project.
+@오준영
+Basic idea is generate the 40kHz.
+An open source code using the sync operation, so I think that can be the proper way to achieve it.

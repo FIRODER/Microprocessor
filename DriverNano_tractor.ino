@@ -1,23 +1,27 @@
 #include <avr/sleep.h>
 #include <avr/power.h>
 
-#define N_PORTS 1
-#define N_DIVS 24
+#define N_PORTS 1 //포트수
+#define N_DIVS 24 //초음파 transducer 수
 
 #define WAIT_LOT(a) __asm__ __volatile__ ("nop"); __asm__ __volatile__ ("nop"); __asm__ __volatile__ ("nop");  __asm__ __volatile__ ("nop"); __asm__ __volatile__ ("nop");__asm__ __volatile__ ("nop"); __asm__ __volatile__ ("nop");__asm__ __volatile__ ("nop"); __asm__ __volatile__ ("nop");  __asm__ __volatile__ ("nop"); __asm__ __volatile__ ("nop");__asm__ __volatile__ ("nop");  __asm__ __volatile__ ("nop");  __asm__ __volatile__ ("nop")
-#define WAIT_MID(a) __asm__ __volatile__ ("nop"); __asm__ __volatile__ ("nop"); __asm__ __volatile__ ("nop");  __asm__ __volatile__ ("nop"); __asm__ __volatile__ ("nop");__asm__ __volatile__ ("nop"); __asm__ __volatile__ ("nop");__asm__ __volatile__ ("nop"); __asm__ __volatile__ ("nop"); __asm__ __volatile__ ("nop"); __asm__ __volatile__ ("nop"); __asm__ __volatile__ ("nop"); __asm__ __volatile__ ("nop")
-#define WAIT_LIT(a) __asm__ __volatile__ ("nop"); __asm__ __volatile__ ("nop"); __asm__ __volatile__ ("nop");  __asm__ __volatile__ ("nop"); __asm__ __volatile__ ("nop");  __asm__ __volatile__ ("nop");  __asm__ __volatile__ ("nop");  __asm__ __volatile__ ("nop");  __asm__ __volatile__ ("nop")
+//14 clock
 
+#define WAIT_MID(a) __asm__ __volatile__ ("nop"); __asm__ __volatile__ ("nop"); __asm__ __volatile__ ("nop");  __asm__ __volatile__ ("nop"); __asm__ __volatile__ ("nop");__asm__ __volatile__ ("nop"); __asm__ __volatile__ ("nop");__asm__ __volatile__ ("nop"); __asm__ __volatile__ ("nop"); __asm__ __volatile__ ("nop"); __asm__ __volatile__ ("nop"); __asm__ __volatile__ ("nop"); __asm__ __volatile__ ("nop")
+//13 clock
+
+#define WAIT_LIT(a) __asm__ __volatile__ ("nop"); __asm__ __volatile__ ("nop"); __asm__ __volatile__ ("nop");  __asm__ __volatile__ ("nop"); __asm__ __volatile__ ("nop");  __asm__ __volatile__ ("nop");  __asm__ __volatile__ ("nop");  __asm__ __volatile__ ("nop");  __asm__ __volatile__ ("nop")
+//9 clock
 
 #define OUTPUT_WAVE(pointer, d)  PORTC = pointer[d*N_PORTS + 0]
 
 #define N_BUTTONS 5
 //half a second
-#define BUTTON_SENS 10000 
+#define BUTTON_SENS 10000 //센서 감도
 #define N_FRAMES 29
 
 static byte frame = 19;
-static byte animation[N_FRAMES][N_DIVS] = 
+static byte animation[N_FRAMES][N_DIVS] = //29x24
 {{0x6,0xc,0xc,0xc,0xc,0xc,0x9,0x9,0x9,0x9,0x9,0x9,0x9,0x3,0x3,0x3,0x3,0x3,0x6,0x6,0x6,0x6,0x6,0x6},
 {0x6,0x6,0x6,0x6,0x6,0xc,0xc,0xc,0xc,0x9,0x9,0x9,0x9,0x9,0x9,0x9,0x9,0x3,0x3,0x3,0x3,0x6,0x6,0x6},
 {0x6,0x6,0x6,0x6,0x6,0x6,0x6,0x6,0x6,0xc,0xc,0xc,0x9,0x9,0x9,0x9,0x9,0x9,0x9,0x9,0x9,0x3,0x3,0x3},
@@ -47,7 +51,12 @@ static byte animation[N_FRAMES][N_DIVS] =
 {0x9,0x9,0x3,0x3,0x6,0x6,0x6,0x6,0x6,0x6,0x6,0x6,0x6,0x6,0xc,0xc,0x9,0x9,0x9,0x9,0x9,0x9,0x9,0x9},
 {0x9,0x9,0x9,0x9,0x6,0x6,0x6,0x6,0x6,0x6,0x6,0x6,0x6,0x6,0x6,0x6,0x9,0x9,0x9,0x9,0x9,0x9,0x9,0x9},
 {0x9,0x9,0x9,0x9,0x9,0xc,0x6,0x6,0x6,0x6,0x6,0x6,0x6,0x6,0x6,0x6,0x6,0x3,0x9,0x9,0x9,0x9,0x9,0x9}};
-
+/*
+0x6 = 0b 0000 0110
+0x3 = 0b 0000 0011
+0x9 = 0b 0000 1001
+0xc = 0b 0000 1010
+*/
 
 void setup()
 {
@@ -70,7 +79,7 @@ void setup()
   }
 */
    DDRC = 0b00111111; //A0 to A5 are the signal outputs
-   PORTC = 0b00000000; 
+   PORTC = 0b00000000; //초기값 0 설정
    
    pinMode(10, OUTPUT); //pin 10 (B2) will generate a 40kHz signal to sync 
    pinMode(11, INPUT_PULLUP); //pin 11 (B3) is the sync in
@@ -84,8 +93,8 @@ void setup()
   noInterrupts();           // disable all interrupts
   TCCR1A = bit (WGM10) | bit (WGM11) | bit (COM1B1); // fast PWM, clear OC1B on compare
   TCCR1B = bit (WGM12) | bit (WGM13) | bit (CS10);   // fast PWM, no prescaler
-  OCR1A =  (F_CPU / 40000L) - 1;
-  OCR1B = (F_CPU / 40000L) / 2;
+  OCR1A =  (F_CPU / 40000L) - 1; //16MHz / 40kHz -1
+  OCR1B = (F_CPU / 40000L) / 2; //16MHz / 40kHz /2
   interrupts();             // enable all interrupts
 
   // disable everything that we do not need 
@@ -110,6 +119,7 @@ void setup()
     OUTPUT_WAVE(emittingPointer, 0); buttonsPort = PIND; WAIT_LIT();
     OUTPUT_WAVE(emittingPointer, 1); anyButtonPressed = (buttonsPort & 0b11111100) != 0b11111100; WAIT_MID();
     OUTPUT_WAVE(emittingPointer, 2); buttonPressed[0] = buttonsPort & 0b00000100; WAIT_MID();
+    //buttonPressed[0]에
     OUTPUT_WAVE(emittingPointer, 3); buttonPressed[1] = buttonsPort & 0b00001000; WAIT_MID();
     OUTPUT_WAVE(emittingPointer, 4); buttonPressed[2] = buttonsPort & 0b00010000; WAIT_MID();
     OUTPUT_WAVE(emittingPointer, 5); buttonPressed[3] = buttonsPort & 0b00100000; WAIT_MID();
@@ -156,3 +166,7 @@ void setup()
 
 void loop(){}
 
+/*
+A0~A5까지를 왜 output으로?
+
+*/

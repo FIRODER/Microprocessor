@@ -1,33 +1,52 @@
-const int servoPin1 = 13; // 서보 모터 1 연결 핀
-const int servoPin2 = 12; // 서보 모터 2 연결 핀
+#define OC1A 9 // OC2A 핀 정의 (9번 핀)
+#define OC1B 10 // OC2B 핀 정의 (10번 핀)
 
-int pulseWidth1; // 서보 모터 1 펄스 너비
-int pulseWidth2; // 서보 모터 2 펄스 너비
+// 서보 모터 PWM 레벨 (UINT_8 형식)
+uint8_t pwmLevel1 = 0;
+uint8_t pwmLevel2 = 0;
+
+// 서보 모터 펄스 너비 (UINT_16 형식)
+uint16_t pulseWidth1 = 0;
+uint16_t pulseWidth2 = 0;
+
+// ISR 함수 정의 - 타이머1 비교 일치 인터럽트 서비스 루틴
+ISR(TIMER1_COMPA_vect){
+    OCR1A = pulseWidth1; // 펄스 폭 설정
+}
+
+ISR(TIMER1_COMPB_vect){
+    OCR1B = pulseWidth2; // 펄스 폭 설정
+}
+
 void setup() {
-  pinMode(servoPin1, OUTPUT); // 서보 모터 1 핀 출력으로 설정
-  pinMode(servoPin2, OUTPUT); // 서보 모터 2 핀 출력으로 설정
+    cli(); // 인터럽트 비활성화
+
+    // 핀 출력 설정
+    DDRB |= (1 << DDB1); // 9번 핀 출력으로 설정 (OC1A)
+    DDRB |= (1 << DDB2); // 10번 핀 출력으로 설정 (OC1B)
+
+    // 타이머1 설정
+    // TCCR2A 레지스터 설정 - CTC 모드, 프리 스케일러 1:8
+    TCCR1A = (1 << WGM11) | (1 << COM1A1) | (1 << COM1B1); // Fast PWM, TOP = ICR1
+    TCCR1B = (1 << WGM13) | (1 << WGM12) | (1 << CS11);    // 프리 스케일러 1:8
+
+    // TOP 값 설정
+    ICR1 = 20000; // 20ms 주기
+
+    // 비교 일치 인터럽트 활성화
+    TIMSK1 = (1 << OCIE1A) | (1 << OCIE1B); 
+
+    sei(); // 인터럽트 활성화
 }
 
 void loop() {
-  int sensorValue1 = analogRead(A0); // 아날로그 센서 1 값 읽기
-  int sensorValue2 = analogRead(A1); // 아날로그 센서 2 값 읽기
+    // 조이스틱 입력을 읽어 서보 모터의 펄스 폭 조절
+    pulseWidth1 = analogRead(A0); // A0 핀에서 조이스틱 값을 읽음
+    pulseWidth2 = analogRead(A1); // A1 핀에서 조이스틱 값을 읽음
 
-  // 센서 값을 0~180도 범위의 각도 값으로 변환
-  int angle1 = map(sensorValue1, 0, 1023, 0, 180);
-  int angle2 = map(sensorValue2, 0, 1023, 0, 180);
+    // 조이스틱 값에 따라 펄스 폭 조정 (서보 모터의 각도 제어)
+    pulseWidth1 = map(pulseWidth1, 0, 1023, 1000, 2000); // 0-1023 -> 1000-2000us
+    pulseWidth2 = map(pulseWidth2, 0, 1023, 1000, 2000); // 0-1023 -> 1000-2000us
 
-  // 각도 값을 서보 모터 펄스 너비로 변환 (500~2500 마이크로초)
-  pulseWidth1 = map(angle1, 0, 180, 500, 2500);
-  pulseWidth2 = map(angle2, 0, 180, 500, 2500);
-
-  // 서보 모터 제어
-  digitalWrite(servoPin1, HIGH);
-  delayMicroseconds(pulseWidth1);
-  digitalWrite(servoPin1, LOW);
-  delay(20); // 다음 펄스까지 대기 시간
-
-  digitalWrite(servoPin2, HIGH);
-  delayMicroseconds(pulseWidth2);
-  digitalWrite(servoPin2, LOW);
-  delay(20); // 다음 펄스까지 대기 시간
+    delay(20); // 서보 모터 갱신 주기 (20ms)
 }

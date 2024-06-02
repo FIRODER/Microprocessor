@@ -17,7 +17,7 @@ ISR(TIMER1_COMPB_vect){
 // ADC 초기화 및 값을 읽어오는 함수
 uint16_t init_ADC(uint8_t pin) {
     // ADC 설정
-    ADMUX = (0 << REFS1) | (1 << REFS0); // AVcc with external capacitor at AREF pin
+    ADMUX |= (0 << REFS1) | (1 << REFS0); // AVcc with external capacitor at AREF pin
     ADMUX |= (0 << ADLAR); // ADC 결과를 오른쪽 정렬
     if(pin == A0){
       ADMUX |= (0 << MUX3) | (0 << MUX2) | (0 << MUX1) | (0 << MUX0); // A0 핀 선택
@@ -46,14 +46,14 @@ void setup() {
     DDRB |= (1 << DDB2); // 10번 핀 출력으로 설정 (OC1B)
 
     // 타이머1 설정
-    TCCR1A = (1 << WGM11) | (1 << COM1A1) | (1 << COM1B1); // Fast PWM, TOP = ICR1
-    TCCR1B = (1 << WGM13) | (1 << WGM12) | (1 << CS11);    // 프리 스케일러 1:8
+    TCCR1A |= (1 << WGM11) | (1 << COM1A1) | (1 << COM1B1); // Fast PWM, TOP = ICR1
+    TCCR1B |= (1 << WGM13) | (1 << WGM12) | (1 << CS11);    // 프리 스케일러 1:8
 
     // TOP 값 설정
     ICR1 = 20000; // 20ms 주기 설정
 
     // 비교 일치 인터럽트 활성화
-    TIMSK1 = (1 << OCIE1A) | (1 << OCIE1B); 
+    TIMSK1 |= (1 << OCIE1A) | (1 << OCIE1B); 
 
     sei(); // 인터럽트 활성화
 }

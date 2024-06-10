@@ -1,4 +1,6 @@
-This branch is part of Timer/Counter code for project.
-@오준영
-Basic idea is generate the 40kHz.
-An open source code using the sync operation, so I think that can be the proper way to achieve it.
+This branch is part of Interrupt code for project.
+@김동현
+We are using three external switch to control the each transducers' phase.
+D2(PB2) is used for Up shifting the pressure trap.
+D3(PB3) is used for Down shifting the pressure trap.
+D4(PB4) is used for Reset the pressure trap.

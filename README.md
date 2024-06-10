@@ -1,4 +1,6 @@
-This branch is part of Timer/Counter code for project.
-@오준영
-Basic idea is generate the 40kHz.
-An open source code using the sync operation, so I think that can be the proper way to achieve it.
+This branch is Transducers Polar Check for the project by @FIRODER (오준영).
+
+Transducer have +/- polar pin. But I cannot trust the mark of manufacturer.
+So, by using multimeter and copper tape I check all +/- pin of 50 transducers.
+
+Result was only 1 error in whole 50 transducers.

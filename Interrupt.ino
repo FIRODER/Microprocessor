@@ -60,7 +60,7 @@ void setup()
 {
 
    DDRC = 0b00111111; //A0 to A5 are the signal outputs
-   PORTC = 0b00000000; //초기값 0 설정
+   PORTC = 0b00000000;
    
    pinMode(10, OUTPUT); //pin 10 (B2) will generate a 40kHz signal to sync 
    pinMode(11, INPUT_PULLUP); //pin 11 (B3) is the sync in

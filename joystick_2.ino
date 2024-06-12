@@ -10,7 +10,7 @@ uint16_t targetPulseWidth1 = 0;
 uint16_t targetPulseWidth2 = 0;
 
 unsigned long previousMillis = 0;
-const long interval = 160; // 서보모터 업데이트 주기 (160ms)
+const long interval = 20; // 서보모터 업데이트 주기 (20ms)
 
 ISR(TIMER1_COMPA_vect) {
     OCR1A = pulseWidth1; // 펄스 폭 설정, x
@@ -84,7 +84,7 @@ void setup() {
     TCCR1B = (1 << WGM13) | (1 << WGM12) | (1 << CS11); 
 
     // Set Top Value to 320000, Creating a 160ms Period for the PWM Signal
-    ICR1 = 320000;
+    ICR1 = 20000;
 
     // Setting for OC1A, OC1B
     TIMSK1 = (1 << OCIE1A) | (1 << OCIE1B); 

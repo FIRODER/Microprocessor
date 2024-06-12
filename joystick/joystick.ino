@@ -1,72 +1,111 @@
-#define OC1A 9 // OC1A 핀 정의 (9번 핀)
-#define OC1B 10 // OC1B 핀 정의 (10번 핀)
+#define OC1A 9 // OC1A PIN
+#define OC1B 10 // OC1B PIN
 
-// 서보 모터 펄스 너비 (UINT_16 형식)
 uint16_t pulseWidth1 = 0;
 uint16_t pulseWidth2 = 0;
 
-// ISR 함수 정의 - 타이머1 비교 일치 인터럽트 서비스 루틴
-ISR(TIMER1_COMPA_vect){
-    OCR1A = pulseWidth1; // 펄스 폭 설정
-}
-
-ISR(TIMER1_COMPB_vect){
-    OCR1B = pulseWidth2; // 펄스 폭 설정
-}
-
-// ADC 초기화 및 값을 읽어오는 함수
+//////////////////////////////////////////////////////////////////////////
+//ADC Setup
+//-ADMUX = 0b 0100 0000; 
+// >> (01) Voltage source: AVcc (REFS[1:0] == 01)
+// >> Input channel: A0 or A1 based on Pin (MUX[3:0])
+//-ADCSRA = 0b 1000 0110; 
+// >> (1) Enable ADC 
+// >> (110) Prescaler 64
+//////////////////////////////////////////////////////////////////////////
 uint16_t init_ADC(uint8_t pin) {
-    // ADC 설정
-    ADMUX |= (0 << REFS1) | (1 << REFS0); // AVcc with external capacitor at AREF pin
-    ADMUX |= (0 << ADLAR); // ADC 결과를 오른쪽 정렬
-    if(pin == A0){
-      ADMUX |= (0 << MUX3) | (0 << MUX2) | (0 << MUX1) | (0 << MUX0); // A0 핀 선택
-    }
-    else if(pin == A1){
-      ADMUX |= (0 << MUX3) | (0 << MUX2) | (0 << MUX1) | (1 << MUX0); // A1 핀 선택
-    }
-    ADCSRA |= (1 << ADEN); // ADC 활성화
-    ADCSRA |= (1 << ADPS2) | (1 << ADPS1) | (0 << ADPS0); // 프리스케일러 64 설정
     
-    // ADC 변환 시작
+    // 1. ADMUX Register
+    // Volatage reference: AVcc (REFS[1:0] == 01)
+    ADMUX = (0 << REFS1) | (1 << REFS0);
+
+    // ADC Right Adjust Result
+    ADMUX |= (0 << ADLAR);
+
+    // Analog Channel Selection: ADC0 (MUX[3:0] == 0000)
+    if(pin == A0){
+      ADMUX |= (0 << MUX3) | (0 << MUX2) | (0 << MUX1) | (0 << MUX0); 
+    }
+
+    // Analog Channel Selection: ADC1 (MUX[3:0] == 0001)
+    else if(pin == A1){
+      ADMUX |= (0 << MUX3) | (0 << MUX2) | (0 << MUX1) | (1 << MUX0); 
+    }
+
+    // 2. ADCSRA Register
+    // ADC Enable
+    ADCSRA |= (1 << ADEN);
+
+    // ADC Prescaler Selct: 64 (ADPS [2:0] == 110)
+    ADCSRA |= (1 << ADPS2) | (1 << ADPS1) | (0 << ADPS0);
+
+    // Start ADC Conversion
     ADCSRA |= (1 << ADSC);
 
-    // 변환이 완료될 때까지 대기
+    // Wait until ADC is completed
     while (ADCSRA & (1 << ADSC));
 
-    // ADC 결과 반환
+    // Return ADC Result
     return ADC;
 }
 
 void setup() {
-    cli(); // 인터럽트 비활성화
+    
+    // Disable Global Interrupt
+    cli();
 
-    // 핀 출력 설정
-    DDRB |= (1 << DDB1); // 9번 핀 출력으로 설정 (OC1A)
-    DDRB |= (1 << DDB2); // 10번 핀 출력으로 설정 (OC1B)
+    // Setting Output Port
+    DDRB |= OC1A; 
+    DDRB |= OC1B;
 
-    // 타이머1 설정
-    TCCR1A |= (1 << WGM11) | (1 << COM1A1) | (1 << COM1B1); // Fast PWM, TOP = ICR1
-    TCCR1B |= (1 << WGM13) | (1 << WGM12) | (1 << CS11);    // 프리 스케일러 1:8
+    /////////////////////////////////////////////////////////////////////////////////////////
+    // Timer/Counter 1
+    // -- TCCR1A = 0b 10100010;
+    // >> (10) Waveform Generation Mode: Fast PWM, TOP = ICR1
+    // >> (10) Compare Output Mode: Clear OC1A/OC1B on compare match (non-inverting mode)
+    // -- TCCR1B = 0b 00011010;
+    // >> (11) Waveform Generation Mode: Fast PWM, TOP = ICR1
+    // >> (010) Clock Select: Prescaler 8
+    // TIMSK1 = 0b 00000110;
+    // >> (11) Enable Output Compare A Match Interrupt and Output Compare B Match Interrupt
+    ////////////////////////////////////////////////////////////////////////////////////////
 
-    // TOP 값 설정
-    ICR1 = 20000; // 20ms 주기 설정
+    // Common Settings
+    TCCR1A = (1 << WGM11) | (1 << COM1A1) | (1 << COM1B1);
+    TCCR1B = (1 << WGM13) | (1 << WGM12) | (1 << CS11); 
 
-    // 비교 일치 인터럽트 활성화
+    // >> (20000) Set Top Value to 20000, Creating a 20ms Period for the PWM Signal
+    // System Clock Frequency = 16 MHz
+    // Prescaler = 8
+    // Timer Clock Frequency = System Clock Frequency / Prescaler = 16,000,000 / 8 = 2,000,000 Hz
+    // Desired PWM Period = 20 ms = 0.020 s
+    // ICR1 = (Desired PWM Period * Timer Clock Frequency) - 1
+    // ICR1 = (0.020 seconds * 2,000,000 Hz) - 1
+    // ICR1 = 40,000 - 1
+    // ICR1 = 39,999
+    ICR1 = 39999;
+
+    // Setting for OC1A, OC1B
     TIMSK1 |= (1 << OCIE1A) | (1 << OCIE1B); 
 
-    sei(); // 인터럽트 활성화
+    // Enable Global Interrupt
+    sei();
 }
 
 void loop() {
-    // 조이스틱 입력을 읽어 서보 모터의 펄스 폭 조절
-    pulseWidth1 = init_ADC(A0); // A0 핀에서 조이스틱 값을 읽음
-    pulseWidth2 = init_ADC(A1); // A1 핀에서 조이스틱 값을 읽음
+    // Read Joystick Value from Pin A0,A1
+    pulseWidth1 = init_ADC(A0); 
+    pulseWidth2 = init_ADC(A1); 
 
-    // 조이스틱 값에 따라 펄스 폭 조정 (서보 모터의 각도 제어)
+    // Map the Joystick Value to Pulse Width for Servo Control
+    // PulseWidth Range: 1000 to 4800 (Correspond to 1ms to 4.8ms pulse)
     pulseWidth1 = (((float)(pulseWidth1 - 0) / (1023 - 0)) * (4800 - 1000) + 1000);
     pulseWidth2 = (((float)(pulseWidth2 - 0) / (1023 - 0)) * (4800 - 1000) + 1000);
 
+    // Set Pulse Width
+    OCR1A = pulseWidth1;
+    OCR1B = pulseWidth2;
 
-    delay(20); // 서보 모터 갱신 주기 (20ms)
+    // Delay for 20ms to Match Servo Motiorr Update Cycle
+    delay(20); 
 }

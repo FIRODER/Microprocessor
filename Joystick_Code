@@ -1,0 +1,56 @@
+const int joystickXPin = A0;  // 조이스틱 X 축 연결 핀
+const int joystickYPin = A1;  // 조이스틱 Y 축 연결 핀
+
+const int motor1Pin1 = 9;  // 모터 1 방향 제어 핀
+const int motor1Pin2 = 10; // 모터 1 속도 제어 핀
+const int motor2Pin1 = 11; // 모터 2 방향 제어 핀
+const int motor2Pin2 = 12; // 모터 2 속도 제어 핀
+
+volatile int xValue = 0;  // 조이스틱 X 축 값 저장 변수
+volatile int yValue = 0;  // 조이스틱 Y 축 값 저장 변수
+
+int motor1Speed = 0;  // 모터 1 속도 변수
+int motor2Speed = 0;  // 모터 2 속도 변수
+
+void ISR_TIMER0_COMPA() {
+  // 조이스틱 X 축 값 읽기 및 저장
+  xValue = analogRead(joystickXPin);
+
+  // 조이스틱 Y 축 값 읽기 및 저장
+  yValue = analogRead(joystickYPin);
+
+  // 모터 1 제어
+  if (xValue > 512) {  // 조이스틱 오른쪽으로 기울어지면
+    digitalWrite(motor1Pin1, HIGH);  // 모터 1 정방향 회전
+    motor1Speed = map(xValue, 512, 1023, 0, 255);  // 속도 조절
+  } else if (xValue < 256) {  // 조이스틱 왼쪽으로 기울어지면
+    digitalWrite(motor1Pin1, LOW);  // 모터 1 역방향 회전
+    motor1Speed = map(xValue, 0, 256, 255, 0);  // 속도 조절
+  } else {
+    digitalWrite(motor1Pin1, LOW);  // 모터 1 정지
+    motor1Speed = 0;  // 속도 0으로 설정
+  }
+
+  // 모터 2 제어
+  if (yValue > 512) {  // 조이스틱 위쪽으로 기울어지면
+    digitalWrite(motor2Pin1, HIGH);  // 모터 2 정방향 회전
+    motor2Speed = map(yValue, 512, 1023, 0, 255);  // 속도 조절
+  } else if (yValue < 256) {  // 조이스틱 아래쪽으로 기울어지면
+    digitalWrite(motor2Pin1, LOW);  // 모터 2 역방향 회전
+    motor2Speed = map(yValue, 0, 256, 255, 0);  // 속도 조절
+  } else {
+    digitalWrite(motor2Pin1, LOW);  // 모터 2 정지
+    motor2Speed = 0;  // 속도 0으로 설정
+  }
+
+  // PWM 신호 생성
+  analogWrite(motor1Pin2, motor1Speed);  // 모터 1 속도 설정
+  analogWrite(motor2Pin2, motor2Speed);  // 모터 2 속도 설정
+}
+
+void setup() {
+  // 타이머 0 설정
+  TCCR0A = 0b1010;  // CTC 모드 설정
+  OCR0A = 255;  // 비교 값 설정 (255 = 1ms 주기)
+  TCCR0B = 0b00000111;  // 분할값 설정 (1MHz 프레큐언시)
+  TIMSK0 = 0b00000001;  // 인터럽트 마스크 설정 (OCR0A 비교 일치 인터럽트 활성화)
